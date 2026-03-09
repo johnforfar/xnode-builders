@@ -40,16 +40,19 @@
 
       systems = import inputs.systems;
       eachSystem =
-        f:
+        pkgsImport: f:
         combine (
           builtins.map (
             system:
             f {
               inherit system;
-              pkgs = import inputs.nixpkgs {
-                inherit system;
-                config.allowUnfree = true;
-              };
+              pkgs = import inputs.nixpkgs (
+                {
+                  inherit system;
+                  config.allowUnfree = true;
+                }
+                // pkgsImport
+              );
             }
           ) systems
         );
@@ -130,9 +133,10 @@
           app = args.appProcess rawApp;
           name = app.name;
           default = app.default or true;
+          pkgsImport = app.pkgsImport or { };
         in
         combine [
-          (eachSystem (
+          (eachSystem pkgsImport (
             {
               system,
               pkgs,
