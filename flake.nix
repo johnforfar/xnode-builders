@@ -158,6 +158,8 @@
                 ${name} = output.devShell;
               }
               // (if default then { default = output.devShell; } else { });
+
+              extras.${system} = { } // (if output ? extra then output.extra else { });
             }
           ))
           (
@@ -609,6 +611,10 @@
               package = (pkgs.callPackages inputs.pyproject-nix.build.util { }).mkApplication {
                 inherit venv;
                 package = pythonSet.${name};
+              };
+
+              extra = {
+                inherit pythonSet venv;
               };
             }
           else
