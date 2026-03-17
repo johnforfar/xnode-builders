@@ -597,7 +597,11 @@
                       (extraPackageArgs.override or (final: prev: { }))
                     ])
                   );
-              venv = pythonSet.mkVirtualEnv "${name}-${version}-venv" workspace.deps.default;
+              venv =
+                (pythonSet.mkVirtualEnv "${name}-${version}-venv" workspace.deps.default).overrideAttrs
+                  (old: {
+                    venvIgnoreCollisions = [ "*" ];
+                  });
             in
             {
               # TODO check
