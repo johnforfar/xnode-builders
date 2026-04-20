@@ -211,11 +211,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1769799857,
-        "narHash": "sha256-88IFXZ7Sa1vxbz5pty0Io5qEaMQMMUPMonLa3Ls/ss4=",
+        "lastModified": 1776200608,
+        "narHash": "sha256-broZ6RFQr4Fv0wT73gGmzNX14A43TmTFF8g4wDKlNss=",
         "owner": "nix-community",
         "repo": "naersk",
-        "rev": "9d4ed44d8b8cecdceb1d6fd76e74123d90ae6339",
+        "rev": "8b23250ab45c2a38cd91031aee26478ca4d0a28e",
         "type": "github"
       },
       "original": {
@@ -258,11 +258,11 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1774106199,
-        "narHash": "sha256-n6Edjl/GL8HQ5SURLc7yE3qAb1hf+9ues8aNtHZnjTA=",
-        "rev": "6c9a78c09ff4d6c21d0319114873508a6ec01655",
+        "lastModified": 1776169885,
+        "narHash": "sha256-Gk2T0tDDDAs319hp/ak+bAIUG5bPMvnNEjPV8CS86Fg=",
+        "rev": "4bd9165a9165d7b5e33ae57f3eecbcb28fb231c9",
         "type": "tarball",
-        "url": "https://releases.nixos.org/nixos/unstable/nixos-26.05pre967235.6c9a78c09ff4/nixexprs.tar.xz"
+        "url": "https://releases.nixos.org/nixos/unstable/nixos-26.05pre980183.4bd9165a9165/nixexprs.tar.xz"
       },
       "original": {
         "type": "tarball",
@@ -308,11 +308,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1773870109,
-        "narHash": "sha256-ZoTdqZP03DcdoyxvpFHCAek4bkPUTUPUF3oCCgc3dP4=",
+        "lastModified": 1776659114,
+        "narHash": "sha256-qapCOQmR++yZSY43dzrp3wCrkOTLpod+ONtJWBk6iKU=",
         "owner": "pyproject-nix",
         "repo": "build-system-pkgs",
-        "rev": "b6e74f433b02fa4b8a7965ee24680f4867e2926f",
+        "rev": "ffaa2161dd5d63e0e94591f86b54fc239660fb2e",
         "type": "github"
       },
       "original": {
@@ -328,11 +328,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1773909723,
-        "narHash": "sha256-HmcZQ/hMPHR22Ri/6Sl7Z0B5J8nZa9bRnZJtDFInM7I=",
+        "lastModified": 1776317425,
+        "narHash": "sha256-5iPq7MxKwAhKu76uGkRo/7RWfu9GCtsMdeacetTFINI=",
         "owner": "pyproject-nix",
         "repo": "pyproject.nix",
-        "rev": "d37dcf34ac7194eac4b0d10520d01298c434267d",
+        "rev": "1b0021e93fa281f694510321514731086dbedd13",
         "type": "github"
       },
       "original": {
@@ -394,11 +394,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1774315256,
-        "narHash": "sha256-jhlzSXk0Rv4cSHoRgEecEcv+veN0q3sD3PIAgqgpwcI=",
+        "lastModified": 1776317509,
+        "narHash": "sha256-nSriomT9IJvyVY/mzyFz4Un6DHSjCfrVitcIfV+VHnY=",
         "owner": "pyproject-nix",
         "repo": "uv2nix",
-        "rev": "0623db9a65da877e4f6f67ed946ffd65401720f0",
+        "rev": "56cfeb9813150e1f900f13e4d6fe46e2845f82d5",
         "type": "github"
       },
       "original": {

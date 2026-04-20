@@ -60,20 +60,21 @@
       defaultModule =
         {
           app,
-          args,
+          nixArgs,
+          builder,
         }:
         let
-          pkgs = args.pkgs;
-          lib = args.lib;
-          config = args.config;
+          pkgs = nixArgs.pkgs;
+          lib = nixArgs.lib;
+          config = nixArgs.config;
           name = app.name;
           description = app.description or "";
-          useNetwork = app.module.network or true;
-          useStorage = app.module.storage or true;
+          useNetwork = if app.module or { } ? network then app.module.network else true;
+          useStorage = if app.module or { } ? storage then app.module.storage else true;
 
           cfg = config.services.${name};
           system = pkgs.stdenv.hostPlatform.system;
-          output = rustApp {
+          output = builder {
             inherit system pkgs app;
           };
         in
@@ -101,15 +102,16 @@
 
             systemd.services.${name} = {
               inherit description;
-              wantedBy = if useNetwork then [ "network-online.target" ] else [ "multi-user.target" ];
-              after = [ "network.target" ];
+              wantedBy = [ "multi-user.target" ];
+              wants = lib.optionals useNetwork [ "network-online.target" ];
+              after = lib.optionals useNetwork [ "network-online.target" ];
               serviceConfig = {
                 ExecStart = "${lib.getExe cfg.package}";
                 User = name;
                 Group = name;
                 Restart = "on-failure";
-                WorkingDirectory = lib.mkIf useStorage "/var/lib/${name}";
-                StateDirectory = lib.mkIf useStorage name;
+                WorkingDirectory = lib.optionalString useStorage "/var/lib/${name}";
+                StateDirectory = lib.optionalString useStorage name;
               };
             };
           };
@@ -165,7 +167,12 @@
           (
             let
               enableModule = app.module.enable or true;
-              module = { pkgs, ... }@args: defaultModule { inherit app args; };
+              module =
+                { pkgs, ... }@nixArgs:
+                defaultModule {
+                  inherit app nixArgs;
+                  builder = args.appBuilder;
+                };
             in
             if enableModule then
               {
@@ -278,7 +285,7 @@
               if builtins.pathExists (src + "/package-lock.json") then
                 "npm"
               else if builtins.pathExists (src + "/yarn.lock") then
-                "yarm"
+                "yarn"
               else if builtins.pathExists (src + "/pnpm-lock.yaml") then
                 "pnpm"
               else if builtins.pathExists (src + "/bun.lock") then
@@ -432,13 +439,12 @@
                         builtins.map (toCopy: "cp --parents -r ${toCopy} $out/share") installArgs.copy or [ ]
                       )}
                       cat > $out/bin/${name} << EOF
-                      #!/usr/bin/env bash
+                      #!${pkgs.lib.getExe pkgs.bash}
                       ${(installArgs.execute or (args: "")) {
                         inherit node npm;
                         dir = "$out/share";
                       }}
                       EOF
-                      patchShebangs $out/bin/${name}
                       chmod +x $out/bin/${name}
                       ${installArgs.commands or ""}
                       ${installArgs.extraCommands or ""}
