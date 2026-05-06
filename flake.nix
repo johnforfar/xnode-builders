@@ -81,7 +81,9 @@
         {
           options = {
             services.${name} = {
-              enable = lib.mkEnableOption "Enable ${name}.";
+              enable = lib.mkEnableOption "Enable ${name}." // {
+                default = true;
+              };
 
               package = lib.mkOption {
                 type = lib.types.package;
