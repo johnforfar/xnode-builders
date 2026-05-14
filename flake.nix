@@ -622,7 +622,12 @@
               };
 
               extra = {
-                inherit pythonSet venv;
+                inherit
+                  args
+                  overlay
+                  pythonSet
+                  venv
+                  ;
               };
             }
           else
