@@ -72,11 +72,13 @@
           useNetwork = if app.module or { } ? network then app.module.network else true;
           useStorage = if app.module or { } ? storage then app.module.storage else true;
 
-          cfg = config.services.${name};
           system = pkgs.stdenv.hostPlatform.system;
           output = builder {
             inherit system pkgs app;
           };
+
+          cfg = config.services.${name};
+          options = (app.options or (args: { })) (nixArgs // { inherit cfg; });
         in
         {
           options = {
@@ -92,31 +94,56 @@
                   ${name} equivalent executable.
                 '';
               };
-            };
-          };
 
-          config = lib.mkIf cfg.enable {
-            users.groups.${name} = { };
-            users.users.${name} = {
-              isSystemUser = true;
-              group = name;
-            };
-
-            systemd.services.${name} = {
-              inherit description;
-              wantedBy = [ "multi-user.target" ];
-              wants = lib.optionals useNetwork [ "network-online.target" ];
-              after = lib.optionals useNetwork [ "network-online.target" ];
-              serviceConfig = {
-                ExecStart = "${lib.getExe cfg.package}";
-                User = name;
-                Group = name;
-                Restart = "on-failure";
-                WorkingDirectory = lib.optionalString useStorage "/var/lib/${name}";
-                StateDirectory = lib.optionalString useStorage name;
+              args = lib.mkOption {
+                type = lib.types.listOf lib.types.str;
+                default = [ ];
+                description = ''
+                  cli args to pass to ${name} executable.
+                '';
               };
-            };
+            }
+            // (builtins.mapAttrs (
+              name: value:
+              lib.mkOption (
+                { default = null; } // value.option // { type = lib.types.nullOr value.options.type; }
+              )
+            ) options);
           };
+
+          config = lib.mkIf cfg.enable (
+            lib.mkMerge [
+              {
+                users.groups.${name} = { };
+                users.users.${name} = {
+                  isSystemUser = true;
+                  group = name;
+                }
+                // (lib.mkIf useStorage {
+                  home = cfg.stateDir;
+                  createHome = true;
+                });
+
+                systemd.services.${name} = {
+                  inherit description;
+                  wantedBy = [ "multi-user.target" ];
+                  wants = lib.optionals useNetwork [ "network-online.target" ];
+                  after = lib.optionals useNetwork [ "network-online.target" ];
+                  serviceConfig = {
+                    ExecStart = "${lib.getExe cfg.package} ${builtins.concatStringsSep " " (builtins.map lib.escapeShellArg cfg.args)}";
+                    User = name;
+                    Group = name;
+                    Restart = "on-failure";
+                    WorkingDirectory = lib.optionalString useStorage "/var/lib/${name}";
+                    StateDirectory = lib.optionalString useStorage name;
+                  };
+                };
+              }
+              (builtins.map (name: lib.mkIf (cfg.${name} != null) options.${name}.does) (
+                builtins.attrNames options
+              ))
+            ]
+          );
         };
 
       defaultDevShellBuildInputs =
