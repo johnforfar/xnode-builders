@@ -78,7 +78,7 @@
           };
 
           cfg = config.services.${name};
-          options = (app.options or (args: { })) (nixArgs // { inherit cfg; });
+          appOptions = (app.options or (args: { })) (nixArgs // { inherit cfg; });
         in
         {
           options = {
@@ -108,41 +108,45 @@
               lib.mkOption (
                 { default = null; } // value.option // { type = lib.types.nullOr value.options.type; }
               )
-            ) options);
+            ) appOptions);
           };
 
           config = lib.mkIf cfg.enable (
-            lib.mkMerge [
-              {
-                users.groups.${name} = { };
-                users.users.${name} = {
-                  isSystemUser = true;
-                  group = name;
-                }
-                // (lib.mkIf useStorage {
-                  home = cfg.stateDir;
-                  createHome = true;
-                });
+            lib.mkMerge (
+              [
+                {
+                  users.groups.${name} = { };
+                  users.users.${name} = lib.mkMerge [
+                    {
+                      isSystemUser = true;
+                      group = name;
+                    }
+                    (lib.optionalAttrs useStorage {
+                      home = "/var/lib/${name}";
+                      createHome = true;
+                    })
+                  ];
 
-                systemd.services.${name} = {
-                  inherit description;
-                  wantedBy = [ "multi-user.target" ];
-                  wants = lib.optionals useNetwork [ "network-online.target" ];
-                  after = lib.optionals useNetwork [ "network-online.target" ];
-                  serviceConfig = {
-                    ExecStart = "${lib.getExe cfg.package} ${builtins.concatStringsSep " " (builtins.map lib.escapeShellArg cfg.args)}";
-                    User = name;
-                    Group = name;
-                    Restart = "on-failure";
-                    WorkingDirectory = lib.optionalString useStorage "/var/lib/${name}";
-                    StateDirectory = lib.optionalString useStorage name;
+                  systemd.services.${name} = {
+                    inherit description;
+                    wantedBy = [ "multi-user.target" ];
+                    wants = lib.optionals useNetwork [ "network-online.target" ];
+                    after = lib.optionals useNetwork [ "network-online.target" ];
+                    serviceConfig = {
+                      ExecStart = "${lib.getExe cfg.package} ${builtins.concatStringsSep " " (builtins.map lib.escapeShellArg cfg.args)}";
+                      User = name;
+                      Group = name;
+                      Restart = "on-failure";
+                      WorkingDirectory = lib.optionalString useStorage "/var/lib/${name}";
+                      StateDirectory = lib.optionalString useStorage name;
+                    };
                   };
-                };
-              }
-              (builtins.map (name: lib.mkIf (cfg.${name} != null) options.${name}.does) (
-                builtins.attrNames options
+                }
+              ]
+              ++ (builtins.map (name: lib.mkIf (cfg.${name} != null) appOptions.${name}.does) (
+                builtins.attrNames appOptions
               ))
-            ]
+            )
           );
         };
 
