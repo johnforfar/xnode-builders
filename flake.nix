@@ -66,19 +66,58 @@
         let
           pkgs = nixArgs.pkgs;
           lib = nixArgs.lib;
-          config = nixArgs.config;
           name = app.name;
           description = app.description or "";
           useNetwork = if app.module or { } ? network then app.module.network else true;
           useStorage = if app.module or { } ? storage then app.module.storage else true;
+          useUser = if app.module or { } ? user then app.module.user else true;
 
           system = pkgs.stdenv.hostPlatform.system;
           output = builder {
             inherit system pkgs app;
           };
 
-          cfg = config.services.${name};
-          appOptions = (app.options or (args: { })) (nixArgs // { inherit cfg; });
+          cfg = nixArgs.config.services.${name};
+          appOptions = if app.module or { } ? options then app.options (nixArgs // { inherit cfg; }) else { };
+
+          isLeaf = option: option ? does;
+          toNixOptions =
+            options:
+            builtins.mapAttrs (
+              _: opt:
+              if isLeaf opt then
+                lib.mkOption ({ default = null; } // opt.option // { type = lib.types.nullOr opt.option.type; })
+              else
+                toNixOptions opt
+            ) options;
+          toNixConfig =
+            path:
+            builtins.concatMap (
+              optName:
+              let
+                fullPath = path ++ [ optName ];
+                opt = lib.getAttrFromPath fullPath nixArgs.options;
+                value = lib.getAttrFromPath fullPath nixArgs.config;
+              in
+              if isLeaf opt then
+                lib.optional (value != null) (
+                  lib.mkMerge (
+                    lib.toList (
+                      opt.does {
+                        inherit value;
+                        service = args: { systemd.services.${name} = args; };
+                        config = lib.setAttrByPath [
+                          "service"
+                          name
+                        ];
+                        me = lib.setAttrByPath fullPath;
+                      }
+                    )
+                  )
+                )
+              else
+                toNixConfig fullPath
+            ) (builtins.attrNames (lib.getAttrFromPath path nixArgs.options));
         in
         {
           options = {
@@ -103,18 +142,25 @@
                 '';
               };
             }
-            // (builtins.mapAttrs (
-              name: value:
-              lib.mkOption (
-                { default = null; } // value.option // { type = lib.types.nullOr value.options.type; }
-              )
-            ) appOptions);
+            // (toNixOptions appOptions);
           };
 
           config = lib.mkIf cfg.enable (
             lib.mkMerge (
               [
-                {
+                (lib.mkIf useNetwork {
+                  systemd.services.${name} = {
+                    wants = [ "network-online.target" ];
+                    after = [ "network-online.target" ];
+                  };
+                })
+                (lib.mkIf useStorage {
+                  systemd.services.${name}.serviceConfig = {
+                    WorkingDirectory = "/var/lib/${name}";
+                    StateDirectory = name;
+                  };
+                })
+                (lib.mkIf useUser {
                   users.groups.${name} = { };
                   users.users.${name} = lib.mkMerge [
                     {
@@ -126,26 +172,26 @@
                       createHome = true;
                     })
                   ];
-
+                  systemd.services.${name}.serviceConfig = {
+                    User = name;
+                    Group = name;
+                  };
+                })
+                {
                   systemd.services.${name} = {
                     inherit description;
                     wantedBy = [ "multi-user.target" ];
-                    wants = lib.optionals useNetwork [ "network-online.target" ];
-                    after = lib.optionals useNetwork [ "network-online.target" ];
                     serviceConfig = {
                       ExecStart = "${lib.getExe cfg.package} ${builtins.concatStringsSep " " (builtins.map lib.escapeShellArg cfg.args)}";
-                      User = name;
-                      Group = name;
-                      Restart = "on-failure";
-                      WorkingDirectory = lib.optionalString useStorage "/var/lib/${name}";
-                      StateDirectory = lib.optionalString useStorage name;
+                      Restart = lib.mkDefault "on-failure";
                     };
                   };
                 }
               ]
-              ++ (builtins.map (name: lib.mkIf (cfg.${name} != null) appOptions.${name}.does) (
-                builtins.attrNames appOptions
-              ))
+              ++ (toNixConfig appOptions [
+                "services"
+                name
+              ])
             )
           );
         };
@@ -199,7 +245,7 @@
           ))
           (
             let
-              enableModule = app.module.enable or true;
+              enableModule = if app.module or { } ? enable then app.module.enable else true;
               module =
                 { pkgs, ... }@nixArgs:
                 defaultModule {
