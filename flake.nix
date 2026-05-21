@@ -192,7 +192,10 @@
                   };
                 }
               ]
-              ++ (toNixConfig appOptions [
+              # Fix: toNixConfig takes only `path`, not (options, path) — the
+              # `appOptions` arg here was leftover from the pre-rewrite signature.
+              # The function reads options from `nixArgs.options` via path.
+              ++ (toNixConfig [
                 "services"
                 name
               ])
