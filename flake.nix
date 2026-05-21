@@ -78,11 +78,13 @@
           };
 
           cfg = nixArgs.config.services.${name};
-          # Fix: condition tested `app.module ? options` but body called `app.options`
-          # (different attr) → "attribute 'options' missing" on every app whose module
-          # exposed options. Apps consistently put the options function at `app.options`,
-          # so check the same attr being used. Fork-only; revert when upstream patches.
-          appOptions = if app ? options then app.options (nixArgs // { inherit cfg; }) else { };
+          # Fix: condition tests `app.module ? options` (correct) but body called
+          # `app.options` (wrong — that attr doesn't exist; options is nested under
+          # module). xnode-manager's flake exports `module = { options = ...; }`, so
+          # `app.module.options` is the function we want. The `.module` got lost in
+          # the body during the May 20 "options rework". Fork-only; revert when
+          # upstream Openmesh-Network/xnode-builders main HEAD is fixed.
+          appOptions = if app.module or { } ? options then app.module.options (nixArgs // { inherit cfg; }) else { };
 
           isLeaf = option: option ? does;
           toNixOptions =
