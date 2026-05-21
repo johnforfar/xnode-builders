@@ -194,7 +194,13 @@
                   };
                 }
               ]
-              ++ (toNixConfig appOptions [
+              # Fix #2: toNixConfig takes only `path`; the leftover `appOptions`
+              # arg from pre-refactor signature caused "expected a list but found
+              # a set" because path=appOptions (a set) got passed to
+              # getAttrFromPath. appOptions is already merged into
+              # nixArgs.options.services.${name} above (line 149), so iterating
+              # `services.${name}` finds all options including the app's.
+              ++ (toNixConfig [
                 "services"
                 name
               ])
