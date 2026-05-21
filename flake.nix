@@ -78,7 +78,11 @@
           };
 
           cfg = nixArgs.config.services.${name};
-          appOptions = if app.module or { } ? options then app.options (nixArgs // { inherit cfg; }) else { };
+          # Fix: condition tested `app.module ? options` but body called `app.options`
+          # (different attr) → "attribute 'options' missing" on every app whose module
+          # exposed options. Apps consistently put the options function at `app.options`,
+          # so check the same attr being used. Fork-only; revert when upstream patches.
+          appOptions = if app ? options then app.options (nixArgs // { inherit cfg; }) else { };
 
           isLeaf = option: option ? does;
           toNixOptions =
