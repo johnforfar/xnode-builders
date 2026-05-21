@@ -87,6 +87,11 @@
           appOptions = if app.module or { } ? options then app.module.options (nixArgs // { inherit cfg; }) else { };
 
           isLeaf = option: option ? does;
+          # Fix #3: nested options need to be wrapped in a submodule so NixOS's
+          # module system recognizes them as proper option declarations rather
+          # than free-form attrset values. Without this, `buildBase = { container = ... }`
+          # would set `buildBase.container` to a value but NixOS would error
+          # "expected a set but found a function" during freeformType evaluation.
           toNixOptions =
             options:
             builtins.mapAttrs (
@@ -94,7 +99,10 @@
               if isLeaf opt then
                 lib.mkOption ({ default = null; } // opt.option // { type = lib.types.nullOr opt.option.type; })
               else
-                toNixOptions opt
+                lib.mkOption {
+                  type = lib.types.submodule { options = toNixOptions opt; };
+                  default = { };
+                }
             ) options;
           toNixConfig =
             path:
